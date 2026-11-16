@@ -68,7 +68,7 @@
         </div>
       </div>
       <div class="content">
-        <p class="label" id="transcriptLabel">What I heard / your command</p>
+        <p class="label">What I heard / your command</p>
         <p class="transcript empty" id="transcript" aria-live="polite">Commands and replies will appear here.</p>
         <form class="input-row" id="commandForm">
           <input id="commandInput" type="text" autocomplete="off" placeholder="Try: “search for space news”" aria-label="Type a command">
@@ -79,12 +79,14 @@
           <button class="chip" type="button" data-command="What time is it?">What time is it?</button>
           <button class="chip" type="button" data-command="What's today's date?">Today's date</button>
           <button class="chip" type="button" data-command="Search for the latest space discoveries">Search the web</button>
-          <button class="chip" type="button" data-command="Open YouTube">Open YouTube</button>
+          <button class="chip" type="button" data-command="Open Instagram">Open Instagram</button>
+          <button class="chip" type="button" data-command="Open WhatsApp">Open WhatsApp</button>
+          <button class="chip" type="button" data-command="Call +15551234567">Call a number</button>
           <button class="chip" type="button" data-command="Help">Help</button>
         </div>
       </div>
     </section>
-    <footer><span>Voice input requires a supported browser and microphone permission.</span><span>Your commands stay in this page.</span></footer>
+    <footer><span>Voice input requires a supported browser and microphone permission.</span><span>Calls require your device's confirmation.</span></footer>
   </main>
 <script>
   (() => {
@@ -100,10 +102,7 @@
     let listening = false;
 
     function setStatus(message) { statusText.textContent = message; }
-    function show(message) {
-      transcript.textContent = message;
-      transcript.classList.remove('empty');
-    }
+    function show(message) { transcript.textContent = message; transcript.classList.remove('empty'); }
     function speak(message) {
       if (!voiceEnabled || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
@@ -111,15 +110,13 @@
       utterance.rate = 1;
       window.speechSynthesis.speak(utterance);
     }
-    function reply(message) {
-      show(message);
-      setStatus('Ready');
-      speak(message);
+    function reply(message) { show(message); setStatus('Ready'); speak(message); }
+    function openPage(url, message) {
+      reply(message);
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
     function search(query) {
-      const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-      reply('Searching the web for “' + query + '”.');
-      window.open(url, '_blank', 'noopener,noreferrer');
+      openPage('https://www.google.com/search?q=' + encodeURIComponent(query), 'Searching the web for “' + query + '”.');
     }
     function handleCommand(raw) {
       const command = raw.trim();
@@ -128,21 +125,46 @@
       const text = command.toLowerCase().replace(/[.!?]+$/g, '').trim();
 
       if (/^(help|what can you do|commands)$/.test(text)) {
-        reply('I can tell you the time or date, search the web, and open YouTube, Google, or GitHub. Try “search for …” or “open YouTube”.');
+        reply('I can tell you the time or date, search the web, open Instagram or WhatsApp, and start a phone call. Say “open Instagram”, “open WhatsApp”, “WhatsApp plus country code and number”, or “call” followed by a phone number.');
       } else if (/\b(time|what time)\b/.test(text)) {
         reply('It is ' + new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date()) + '.');
       } else if (/\b(date|today|day is it)\b/.test(text)) {
         reply('Today is ' + new Intl.DateTimeFormat(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date()) + '.');
+      } else if (/^(open|go to)\s+instagram$/.test(text)) {
+        openPage('https://www.instagram.com/', 'Opening Instagram.');
+      } else if (/^(open|go to)\s+whatsapp$/.test(text)) {
+        openPage('https://web.whatsapp.com/', 'Opening WhatsApp Web.');
       } else if (/^(open|go to)\s+(youtube|you tube)$/.test(text)) {
-        reply('Opening YouTube.'); window.open('https://www.youtube.com/', '_blank', 'noopener,noreferrer');
+        openPage('https://www.youtube.com/', 'Opening YouTube.');
       } else if (/^(open|go to)\s+google$/.test(text)) {
-        reply('Opening Google.'); window.open('https://www.google.com/', '_blank', 'noopener,noreferrer');
+        openPage('https://www.google.com/', 'Opening Google.');
       } else if (/^(open|go to)\s+github$/.test(text)) {
-        reply('Opening GitHub.'); window.open('https://github.com/', '_blank', 'noopener,noreferrer');
+        openPage('https://github.com/', 'Opening GitHub.');
       } else {
-        const match = text.match(/^(?:search(?: the web)? for|look up|google)\s+(.+)$/);
-        if (match) search(match[1]);
-        else reply('I didn’t catch that. Say “help” to see what I can do, or try “search for …”.');
+        const callMatch = text.match(/^(?:call|phone|dial)\s+(.+)$/);
+        const whatsappMatch = text.match(/^(?:whatsapp|message on whatsapp|send whatsapp(?: message)? to)\s+([+\d][\d\s().-]*)(?:\s+(?:saying|message)\s+(.+))?$/);
+        const searchMatch = text.match(/^(?:search(?: the web)? for|look up|google)\s+(.+)$/);
+        if (callMatch) {
+          const phone = callMatch[1].replace(/[\s().-]/g, '');
+          if (!/^\+?\d{7,15}$/.test(phone)) {
+            reply('Please provide a phone number with country code, for example “call +15551234567”.');
+          } else {
+            reply('Opening your phone app to call ' + phone + '. Review and confirm the call on your device.');
+            window.location.href = 'tel:' + phone;
+          }
+        } else if (whatsappMatch) {
+          const phone = whatsappMatch[1].replace(/\D/g, '');
+          if (!/^\d{7,15}$/.test(phone)) {
+            reply('Please include the recipient’s country code and number, for example “WhatsApp +447700900123”.');
+          } else {
+            const message = whatsappMatch[2] ? '&text=' + encodeURIComponent(whatsappMatch[2]) : '';
+            openPage('https://wa.me/' + phone + message, whatsappMatch[2] ? 'Opening WhatsApp with your message ready. Review it and send it yourself.' : 'Opening a WhatsApp chat.');
+          }
+        } else if (searchMatch) {
+          search(searchMatch[1]);
+        } else {
+          reply('I didn’t catch that. Say “help” to see what I can do, or try “open Instagram”, “open WhatsApp”, or “call” followed by a number.');
+        }
       }
     }
 
