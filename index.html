@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>JARVIS — Personal Assistant</title>
+  <style>
+    :root { color-scheme: dark; --bg:#07111f; --panel:#0d1b2b; --line:#1c344b; --cyan:#63e6f4; --muted:#91a7bc; --text:#edf7ff; --glow:rgba(99,230,244,.18); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; color:var(--text); background:radial-gradient(ellipse at 50% 30%, #122d42 0, var(--bg) 62%); font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+    button,input { font:inherit; }
+    .app { width:min(760px,100%); }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand-mark { width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--cyan);border-radius:50%;color:var(--cyan);font-weight:800;letter-spacing:.08em;box-shadow:0 0 24px var(--glow); }
+    h1 { margin:0;font-size:1.15rem;letter-spacing:.16em; }
+    .subtitle,.status { color:var(--muted);font-size:.87rem; }
+    .status { display:flex;align-items:center;gap:8px; }
+    .dot { width:8px;height:8px;border-radius:50%;background:#79e7a5;box-shadow:0 0 10px #79e7a5; }
+    .card { overflow:hidden;border:1px solid var(--line);border-radius:20px;background:rgba(13,27,43,.92);box-shadow:0 24px 80px #0007; }
+    .hero { display:grid;place-items:center;padding:38px 24px 30px;border-bottom:1px solid var(--line);text-align:center; }
+    .orb-wrap { position:relative;display:grid;place-items:center;width:158px;height:158px;margin-bottom:20px; }
+    .orb { width:118px;height:118px;border-radius:50%;border:1px solid #63e6f488;background:radial-gradient(circle at 38% 32%,#8df5ff 0,#28abc8 14%,#123b58 45%,#081522 72%);box-shadow:0 0 30px #4bd7ef66,inset 0 0 28px #63e6f455;transition:transform .25s,box-shadow .25s; }
+    .orb:before,.orb:after { content:"";position:absolute;inset:5px;border:1px solid #63e6f455;border-radius:50%;animation:pulse 3s ease-out infinite; }
+    .orb:after { animation-delay:1.5s; }
+    .listening .orb { transform:scale(1.06);box-shadow:0 0 55px #4bd7efaa,inset 0 0 30px #63e6f499; }
+    @keyframes pulse { 0%{transform:scale(.75);opacity:.8} 100%{transform:scale(1.2);opacity:0} }
+    .hero h2 { margin:0 0 5px;font-size:1.3rem; }
+    .hero p { margin:0;color:var(--muted); }
+    .controls { display:flex;align-items:center;justify-content:center;gap:12px;margin-top:22px; }
+    .mic { min-width:154px;border:0;border-radius:999px;padding:12px 20px;background:var(--cyan);color:#06202a;font-weight:750;cursor:pointer;transition:filter .2s,transform .2s; }
+    .mic:hover { filter:brightness(1.08);transform:translateY(-1px); }
+    .mic:disabled { opacity:.5;cursor:not-allowed; }
+    .quiet { border:1px solid var(--line);border-radius:999px;padding:11px 16px;color:var(--text);background:transparent;cursor:pointer; }
+    .quiet:hover { border-color:var(--cyan); }
+    .content { padding:22px 24px 24px; }
+    .label { margin:0 0 10px;color:var(--muted);font-size:.76rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase; }
+    .transcript { min-height:48px;margin:0 0 22px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#071522;color:var(--text);overflow-wrap:anywhere; }
+    .transcript.empty { color:#71869b; }
+    .input-row { display:flex;gap:10px; }
+    input { flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--text);background:#071522; }
+    input:focus { outline:2px solid #63e6f477;border-color:var(--cyan); }
+    .send { border:1px solid #63e6f488;border-radius:10px;padding:0 18px;color:var(--cyan);background:#0b2433;font-weight:700;cursor:pointer; }
+    .send:hover { background:#123448; }
+    .commands { display:flex;flex-wrap:wrap;gap:8px;margin-top:14px; }
+    .chip { border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:#b9ccdc;background:#0b1826;font-size:.81rem;cursor:pointer; }
+    .chip:hover { border-color:#63e6f488;color:var(--cyan); }
+    footer { display:flex;justify-content:space-between;gap:12px;margin-top:13px;color:#8196aa;font-size:.78rem; }
+    @media(max-width:520px) { body{padding:14px}.hero{padding:28px 16px 24px}.content{padding:18px 16px}.status{font-size:.75rem}.controls{flex-direction:column}.mic,.quiet{width:100%}footer{flex-direction:column} }
+    @media(prefers-reduced-motion:reduce) { *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important} }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand"><div class="brand-mark" aria-hidden="true">J</div><div><h1>J.A.R.V.I.S.</h1><div class="subtitle">Your personal browser assistant</div></div></div>
+      <div class="status"><span class="dot" aria-hidden="true"></span><span id="statusText" role="status">Ready</span></div>
+    </header>
+    <section class="card" aria-label="Jarvis assistant">
+      <div class="hero" id="hero">
+        <div class="orb-wrap" aria-hidden="true"><div class="orb"></div></div>
+        <h2 id="greeting">At your service.</h2>
+        <p>Talk to me, or type a command below.</p>
+        <div class="controls">
+          <button class="mic" id="micButton" type="button">🎙 Start listening</button>
+          <button class="quiet" id="voiceButton" type="button" aria-pressed="true">Voice replies: on</button>
+        </div>
+      </div>
+      <div class="content">
+        <p class="label" id="transcriptLabel">What I heard / your command</p>
+        <p class="transcript empty" id="transcript" aria-live="polite">Commands and replies will appear here.</p>
+        <form class="input-row" id="commandForm">
+          <input id="commandInput" type="text" autocomplete="off" placeholder="Try: “search for space news”" aria-label="Type a command">
+          <button class="send" type="submit">Send</button>
+        </form>
+        <p class="label" style="margin-top:22px">Try a command</p>
+        <div class="commands" aria-label="Example commands">
+          <button class="chip" type="button" data-command="What time is it?">What time is it?</button>
+          <button class="chip" type="button" data-command="What's today's date?">Today's date</button>
+          <button class="chip" type="button" data-command="Search for the latest space discoveries">Search the web</button>
+          <button class="chip" type="button" data-command="Open YouTube">Open YouTube</button>
+          <button class="chip" type="button" data-command="Help">Help</button>
+        </div>
+      </div>
+    </section>
+    <footer><span>Voice input requires a supported browser and microphone permission.</span><span>Your commands stay in this page.</span></footer>
+  </main>
+<script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const statusText = $('statusText');
+    const transcript = $('transcript');
+    const micButton = $('micButton');
+    const hero = $('hero');
+    const commandInput = $('commandInput');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let voiceEnabled = true;
+    let listening = false;
+
+    function setStatus(message) { statusText.textContent = message; }
+    function show(message) {
+      transcript.textContent = message;
+      transcript.classList.remove('empty');
+    }
+    function speak(message) {
+      if (!voiceEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+    function reply(message) {
+      show(message);
+      setStatus('Ready');
+      speak(message);
+    }
+    function search(query) {
+      const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+      reply('Searching the web for “' + query + '”.');
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    function handleCommand(raw) {
+      const command = raw.trim();
+      if (!command) return;
+      show('You: ' + command);
+      const text = command.toLowerCase().replace(/[.!?]+$/g, '').trim();
+
+      if (/^(help|what can you do|commands)$/.test(text)) {
+        reply('I can tell you the time or date, search the web, and open YouTube, Google, or GitHub. Try “search for …” or “open YouTube”.');
+      } else if (/\b(time|what time)\b/.test(text)) {
+        reply('It is ' + new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date()) + '.');
+      } else if (/\b(date|today|day is it)\b/.test(text)) {
+        reply('Today is ' + new Intl.DateTimeFormat(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date()) + '.');
+      } else if (/^(open|go to)\s+(youtube|you tube)$/.test(text)) {
+        reply('Opening YouTube.'); window.open('https://www.youtube.com/', '_blank', 'noopener,noreferrer');
+      } else if (/^(open|go to)\s+google$/.test(text)) {
+        reply('Opening Google.'); window.open('https://www.google.com/', '_blank', 'noopener,noreferrer');
+      } else if (/^(open|go to)\s+github$/.test(text)) {
+        reply('Opening GitHub.'); window.open('https://github.com/', '_blank', 'noopener,noreferrer');
+      } else {
+        const match = text.match(/^(?:search(?: the web)? for|look up|google)\s+(.+)$/);
+        if (match) search(match[1]);
+        else reply('I didn’t catch that. Say “help” to see what I can do, or try “search for …”.');
+      }
+    }
+
+    $('commandForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      handleCommand(commandInput.value);
+      commandInput.value = '';
+    });
+    document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => handleCommand(chip.dataset.command)));
+    $('voiceButton').addEventListener('click', (event) => {
+      voiceEnabled = !voiceEnabled;
+      event.currentTarget.textContent = 'Voice replies: ' + (voiceEnabled ? 'on' : 'off');
+      event.currentTarget.setAttribute('aria-pressed', String(voiceEnabled));
+      if (!voiceEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    });
+
+    if (!SpeechRecognition) {
+      micButton.disabled = true;
+      micButton.textContent = '🎙 Voice unavailable';
+      setStatus('Type a command instead');
+    } else {
+      recognition = new SpeechRecognition();
+      recognition.lang = navigator.language || 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => { listening = true; hero.classList.add('listening'); micButton.textContent = '⏹ Stop listening'; setStatus('Listening…'); };
+      recognition.onresult = (event) => handleCommand(event.results[0][0].transcript);
+      recognition.onerror = (event) => {
+        const message = event.error === 'not-allowed' ? 'Microphone access was denied. You can type commands instead.' : 'Voice input error: ' + event.error + '. You can type commands instead.';
+        show(message); setStatus('Voice input unavailable');
+      };
+      recognition.onend = () => { listening = false; hero.classList.remove('listening'); micButton.textContent = '🎙 Start listening'; if (statusText.textContent === 'Listening…') setStatus('Ready'); };
+      micButton.addEventListener('click', () => {
+        if (listening) recognition.stop();
+        else { try { recognition.start(); } catch (_) { setStatus('Please wait, then try again'); } }
+      });
+    }
+
+    const hour = new Date().getHours();
+    $('greeting').textContent = hour < 12 ? 'Good morning. At your service.' : hour < 18 ? 'Good afternoon. At your service.' : 'Good evening. At your service.';
+  })();
+</script>
+</body>
+</html>
